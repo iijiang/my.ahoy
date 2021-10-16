@@ -20,26 +20,25 @@ commands:
   import-db:
     usage: Import db from GovCMS DB dump.  `ahoy my import-db tmp/backup...tar.gz `
     cmd: |
-      filename="$@"
+      FILENAME="$@"
       DBDUMP="db-dump.sql"
       APPFILESPATH="/app/web/sites/default/files"
       DBCONN=$(ahoy drush sql-connect)
-      if [[ "${filename}" =~ \.tar.gz ]] ; then
+      if [[ "${FILENAME}" =~ \.tar.gz ]] ; then
         # Daily DB backup with tar.gz extension.
         tar -xvf $@ --one-top-level=files/${DBDUMP} --strip-components 1
         ahoy drush sql-drop -y &&
         ahoy run "${DBCONN} < ${APPFILESPATH}/${DBDUMP}"
         rm -f files/${DBDUMP}
       else 
-        if [[ "${filename}" =~ \sql.gz ]] ; then
+        if [[ "${FILENAME}" =~ \sql.gz ]] ; then
+          # Random DB backup with sql.gz extension.
           cp $@ files/
-          FILEPATH=$@
-          FILENAME=${FILEPATH##*/}
-          echo ${FILENAME}
+          FILENAME=${FILENAME##*/}
           ahoy drush sql-drop -y &&
           # gunzip < "$@" | docker-compose exec -T cli bash -c 'drush sql-cli'
           ahoy run "gunzip --stdout ${APPFILESPATH}/${FILENAME} | ${DBCONN}"
         else 
-          echo "Command only support tar.gz or gz compressed db dump. Try ahoy --help"
+          echo "Command only support tar.gz or sql.gz compressed db dump. Try ahoy --help"
         fi
       fi
