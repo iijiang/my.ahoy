@@ -1,0 +1,45 @@
+---
+ahoyapi: v2
+usage: Project specific ahoy commands.
+
+commands:
+  help:
+    cmd: |
+      echo
+      echo -e "\033[0;32mCustom Ahoy commands\033[0m"
+      echo -e "You may add custom commands to \033[0;32mcustom/ahoy.yml\033[0m to share with developers in your project."
+      echo -e "Type \`\033[0;32mahoy my\033[0m\` for a list of custom commmands."
+      echo
+  dev:
+    usage: Enable dblog and unblock user zero.
+    cmd: |
+      ahoy drush en dblog &&
+      ahoy drush uublk $(ahoy drush uinf --uid=1 --field=name) && 
+      ahoy drush ev '$u=\Drupal\user\Entity\User::load(1); $u->set("field_password_expiration", "0");  $u->set("field_last_password_reset", date("Y-m-d\TH:i:s")); $u->save();' &&
+      ahoy drush uli
+  import-db:
+    usage: Import db from GovCMS DB dump.  `ahoy my import-db tmp/backup...tar.gz `
+    cmd: |
+      filename="$@"
+      DBDUMP="db-dump.sql"
+      APPFILESPATH="/app/web/sites/default/files"
+      DBCONN=$(ahoy drush sql-connect)
+      if [[ "${filename}" =~ \.tar.gz ]] ; then
+        # Daily DB backup with tar.gz extension.
+        tar -xvf $@ --one-top-level=files/${DBDUMP} --strip-components 1
+        ahoy drush sql-drop -y &&
+        ahoy run "${DBCONN} < ${APPFILESPATH}/${DBDUMP}"
+        rm -f files/${DBDUMP}
+      else 
+        if [[ "${filename}" =~ \sql.gz ]] ; then
+          cp $@ files/
+          FILEPATH=$@
+          FILENAME=${FILEPATH##*/}
+          echo ${FILENAME}
+          ahoy drush sql-drop -y &&
+          # gunzip < "$@" | docker-compose exec -T cli bash -c 'drush sql-cli'
+          ahoy run "gunzip --stdout ${APPFILESPATH}/${FILENAME} | ${DBCONN}"
+        else 
+          echo "Command only support tar.gz or gz compressed db dump. Try ahoy --help"
+        fi
+      fi
