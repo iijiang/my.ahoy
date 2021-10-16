@@ -38,6 +38,7 @@ commands:
           ahoy drush sql-drop -y &&
           # gunzip < "$@" | docker-compose exec -T cli bash -c 'drush sql-cli'
           ahoy run "gunzip --stdout ${APPFILESPATH}/${FILENAME} | ${DBCONN}"
+          rm -f files/${FILENAME}
         else 
           echo "Command only support tar.gz or sql.gz compressed db dump. Try ahoy --help"
         fi
